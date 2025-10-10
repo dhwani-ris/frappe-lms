@@ -40,18 +40,23 @@
 						v-bind="{
 							label: activeTab.label,
 							description: activeTab.description,
-							...(activeTab.label === 'Branding'
+							...(activeTab.label == 'Branding'
 								? { fields: activeTab.fields }
+								: {}),
+							...(activeTab.label == 'Evaluators' ||
+							activeTab.label == 'Members' ||
+							activeTab.label == 'Transactions'
+								? { 'onUpdate:show': (val) => (show = val), show }
 								: {}),
 						}"
 					/>
-					<PaymentSettings
-						v-else-if="activeTab.label === 'Payment Gateway'"
+					<!-- <PaymentSettings
+						v-else-if="activeTab.label === 'Gateways'"
 						:label="activeTab.label"
 						:description="activeTab.description"
 						:data="data"
 						:fields="activeTab.fields"
-					/>
+					/> -->
 					<SettingDetails
 						v-else
 						:fields="activeTab.fields"
@@ -75,7 +80,8 @@ import Evaluators from '@/components/Settings/Evaluators.vue'
 import Categories from '@/components/Settings/Categories.vue'
 import EmailTemplates from '@/components/Settings/EmailTemplates.vue'
 import BrandSettings from '@/components/Settings/BrandSettings.vue'
-import PaymentSettings from '@/components/Settings/PaymentSettings.vue'
+import PaymentGateways from '@/components/Settings/PaymentGateways.vue'
+import Transactions from '@/components/Settings/Transactions.vue'
 import ZoomSettings from '@/components/Settings/ZoomSettings.vue'
 import Badges from '@/components/Settings/Badges.vue'
 
@@ -107,13 +113,6 @@ const tabsStructure = computed(() => {
 							name: 'allow_guest_access',
 							description:
 								'If enabled, users can access the course and batch lists without logging in.',
-							type: 'checkbox',
-						},
-						{
-							label: 'Enable Learning Paths',
-							name: 'enable_learning_paths',
-							description:
-								'This will ensure students follow the assigned programs in order.',
 							type: 'checkbox',
 						},
 						{
@@ -162,17 +161,36 @@ const tabsStructure = computed(() => {
 						},
 					],
 				},
+				{
+					label: 'Contact Us',
+					icon: 'Phone',
+					fields: [
+						{
+							label: 'Email',
+							name: 'contact_us_email',
+							type: 'text',
+							description:
+								'Users can reach out to this email for support or inquiries.',
+						},
+						{
+							label: 'URL',
+							name: 'contact_us_url',
+							type: 'text',
+							description:
+								'Users can reach out to this URL for support or inquiries.',
+						},
+					],
+				},
 			],
 		},
 		{
-			label: 'Settings',
-			hideLabel: true,
+			label: 'Payment',
+			hideLabel: false,
 			items: [
 				{
-					label: 'Payment Gateway',
-					icon: 'DollarSign',
-					description:
-						'Configure the payment gateway and other payment related settings',
+					label: 'Configuration',
+					icon: 'CreditCard',
+					description: 'Manage all your payment related settings and defaults',
 					fields: [
 						{
 							label: 'Default Currency',
@@ -205,6 +223,18 @@ const tabsStructure = computed(() => {
 							type: 'checkbox',
 						},
 					],
+				},
+				{
+					label: 'Gateways',
+					icon: 'DollarSign',
+					template: markRaw(PaymentGateways),
+					description: 'Add and manage all your payment gateways',
+				},
+				{
+					label: 'Transactions',
+					icon: 'Landmark',
+					template: markRaw(Transactions),
+					description: 'View all your payment transactions',
 				},
 			],
 		},
@@ -273,11 +303,15 @@ const tabsStructure = computed(() => {
 							label: 'Logo',
 							name: 'banner_image',
 							type: 'Upload',
+							description:
+								'Appears in the top left corner of the application to represent your brand.',
 						},
 						{
 							label: 'Favicon',
 							name: 'favicon',
 							type: 'Upload',
+							description:
+								'Appears in the browser tab next to the page title to help users quickly identify the application.',
 						},
 					],
 				},
@@ -302,8 +336,8 @@ const tabsStructure = computed(() => {
 							type: 'checkbox',
 						},
 						{
-							label: 'Certified Members',
-							name: 'certified_members',
+							label: 'Certifications',
+							name: 'certifications',
 							type: 'checkbox',
 						},
 						{
