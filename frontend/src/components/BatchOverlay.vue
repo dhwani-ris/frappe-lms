@@ -112,6 +112,14 @@
 				</template>
 				{{ __('Enroll Now') }}
 			</Button>
+			<Button class="w-full mt-2" @click="copyBatchUrl">
+				<template #prefix>
+					<Link class="h-4 w-4 stroke-1.5" />
+				</template>
+				<span>
+					{{ __('Copy Link') }}
+				</span>
+			</Button>
 			<router-link
 				v-if="isModerator"
 				:to="{
@@ -143,6 +151,7 @@ import {
 	Globe,
 	GraduationCap,
 	LogIn,
+	Link,
 	Pencil,
 	Settings,
 } from 'lucide-vue-next'
@@ -204,6 +213,30 @@ const isStudent = computed(() => {
 const isModerator = computed(() => {
 	return user.data?.is_moderator
 })
+
+const copyBatchUrl = () => {
+	const url = `${window.location.origin}/lms/batches/details/${props.batch.data.name}`
+	
+	if (navigator.clipboard) {
+		navigator.clipboard.writeText(url)
+			.then(() => toast.success(__('URL copied!')))
+			.catch(() => fallbackCopy(url))
+	} else {
+		fallbackCopy(url)
+	}
+}
+
+const fallbackCopy = (url) => {
+	const textArea = document.createElement('textarea')
+	textArea.value = url
+	textArea.style.position = 'fixed'
+	textArea.style.left = '-9999px'
+	document.body.appendChild(textArea)
+	textArea.select()
+	document.execCommand('copy')
+	document.body.removeChild(textArea)
+	toast.success(__('URL copied!'))
+}
 
 const isEvaluator = computed(() => {
 	return user.data?.is_evaluator
