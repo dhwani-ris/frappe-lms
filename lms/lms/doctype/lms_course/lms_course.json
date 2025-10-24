@@ -27,6 +27,7 @@
   "section_break_7",
   "published",
   "published_on",
+  "course_duration",
   "column_break_10",
   "upcoming",
   "featured",
@@ -278,7 +279,12 @@
    "fieldtype": "Select",
    "label": "Color",
    "options": "Red\nBlue\nGreen\nAmber\nCyan\nOrange\nPink\nPurple\nTeal\nViolet\nYellow\nGray"
-  }
+  },
+  {
+    "fieldname": "course_duration",
+    "fieldtype": "Float",
+    "label": "Course Duration"
+   }
  ],
  "is_published_field": "published",
  "links": [

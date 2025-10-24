@@ -542,6 +542,7 @@ def get_courses_under_review():
 			"currency",
 			"status",
 			"published",
+			"course_duration",
 		],
 	)
 
@@ -1086,6 +1087,7 @@ def get_course_fields():
 		"lessons",
 		"enrollments",
 		"rating",
+		"course_duration",
 	]
 
 
@@ -1118,6 +1120,7 @@ def get_course_details(course):
 			"lessons",
 			"enrollments",
 			"rating",
+			"course_duration",
 		],
 		as_dict=1,
 	)
