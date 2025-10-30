@@ -18,6 +18,51 @@
 					</template>
 				</Button>
 				<CertificationLinks :courseName="courseName" />
+				<Button v-if="lesson.data.prev" @click="switchLesson('prev')">
+					<template #prefix>
+						<ChevronLeft class="w-4 h-4 stroke-1" />
+					</template>
+					<span>
+						{{ __('Previous') }}
+					</span>
+				</Button>
+
+				<router-link
+					v-if="allowEdit()"
+					:to="{
+						name: 'LessonForm',
+						params: {
+							courseName: courseName,
+							chapterNumber: props.chapterNumber,
+							lessonNumber: props.lessonNumber,
+						},
+					}"
+				>
+					<Button>
+						{{ __('Edit') }}
+					</Button>
+				</router-link>
+
+				<Button v-if="lesson.data.next" @click="switchLesson('next')">
+					<template #suffix>
+						<ChevronRight class="w-4 h-4 stroke-1" />
+					</template>
+					<span>
+						{{ __('Next') }}
+					</span>
+				</Button>
+
+				<router-link
+					v-else
+					:to="{
+						name: 'CourseDetail',
+						params: { courseName: courseName },
+					}"
+				>
+					<Button>
+						{{ __('Back to Course') }}
+					</Button>
+				</router-link>
 			</div>
 		</header>
 		<div class="grid md:grid-cols-[70%,30%] h-screen">
@@ -100,11 +145,11 @@
 								</div>
 							</div>
 
-							<div class="flex items-center space-x-2 mt-2 md:mt-0">
-								<Button
-									v-if="zenModeEnabled"
-									@click="showDiscussionsInZenMode()"
-								>
+							<div
+								v-if="zenModeEnabled"
+								class="flex items-center space-x-2 mt-2 md:mt-0"
+							>
+								<Button @click="showDiscussionsInZenMode()">
 									<template #icon>
 										<MessageCircleQuestion class="w-4 h-4 stroke-1.5" />
 									</template>
@@ -219,10 +264,11 @@
 					</div>
 					<div
 						v-if="lesson.data"
-						class="mt-10 pt-5 border-t px-5"
+						class="mt-10 pb-20 pt-5 border-t px-5"
 						ref="discussionsContainer"
 					>
 						<TabButtons
+							v-if="tabs.length > 1"
 							:buttons="tabs"
 							v-model="currentTab"
 							class="w-fit mb-10"
@@ -267,6 +313,7 @@
 					:courseName="courseName"
 					:key="chapterNumber"
 					:getProgress="lesson.data.membership ? true : false"
+					:lessonProgress="lessonProgress"
 				/>
 			</div>
 		</div>
@@ -422,6 +469,15 @@ const setupLesson = (data) => {
 			params: { courseName: props.courseName },
 		})
 		return
+	}
+	if (data.is_scorm_package) {
+		router.push({
+			name: 'SCORMChapter',
+			params: {
+				courseName: props.courseName,
+				chapterName: data.chapter_name,
+			},
+		})
 	}
 	lessonProgress.value = data.membership?.progress
 	if (data.content) editor.value = renderEditor('editor', data.content)
@@ -792,6 +848,7 @@ const showDiscussionsInZenMode = () => {
 		allowDiscussions.value = false
 	} else {
 		allowDiscussions.value = true
+		currentTab.value = 'Community'
 		scrollDiscussionsIntoView()
 	}
 }
