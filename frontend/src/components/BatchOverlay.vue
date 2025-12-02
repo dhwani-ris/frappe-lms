@@ -237,6 +237,7 @@ const fallbackCopy = (url) => {
 	document.body.removeChild(textArea)
 	toast.success(__('URL copied!'))
 }
+
 const isEvaluator = computed(() => {
 	return user.data?.is_evaluator
 })
