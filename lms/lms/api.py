@@ -15,7 +15,6 @@ from frappe.integrations.frappe_providers.frappecloud_billing import (
 	current_site_info,
 	is_fc_site,
 )
-from frappe.query_builder import DocType
 from frappe.translate import get_all_translations
 from frappe.utils import (
 	add_days,
@@ -30,7 +29,13 @@ from frappe.utils import (
 from frappe.utils.response import Response
 
 from lms.lms.doctype.course_lesson.course_lesson import save_progress
-from lms.lms.utils import get_average_rating, get_batch_details, get_course_details, get_lesson_count
+from lms.lms.utils import (
+	get_average_rating,
+	get_batch_details,
+	get_course_details,
+	get_instructors,
+	get_lesson_count,
+)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -281,49 +286,41 @@ def get_evaluator_details(evaluator):
 
 @frappe.whitelist(allow_guest=True)
 def get_certified_participants(filters=None, start=0, page_length=100):
-	or_filters = {}
-	if not filters:
-		filters = {}
-
-	filters.update({"published": 1})
-
-	category = filters.get("category")
-	if category:
-		del filters["category"]
-		or_filters["course_title"] = ["like", f"%{category}%"]
-		or_filters["batch_title"] = ["like", f"%{category}%"]
-
-	participants = frappe.db.get_all(
-		"LMS Certificate",
-		filters=filters,
-		or_filters=or_filters,
-		fields=["member", "issue_date"],
-		group_by="member",
-		order_by="issue_date desc",
-		start=start,
-		page_length=page_length,
-	)
+	query = get_certification_query(filters)
+	query = query.orderby("issue_date", order=frappe.qb.desc).offset(start).limit(page_length)
+	participants = query.run(as_dict=True)
 
 	for participant in participants:
-		count = frappe.db.count("LMS Certificate", {"member": participant.member})
-		details = frappe.db.get_value(
-			"User",
-			participant.member,
-			["full_name", "user_image", "username", "country", "headline", "looking_for_job"],
-			as_dict=1,
-		)
-		details["certificate_count"] = count
+		details = get_certified_participant_details(participant.member)
 		participant.update(details)
 
 	return participants
 
 
-@frappe.whitelist(allow_guest=True)
-def get_count_of_certified_members(filters=None):
-	Certificate = DocType("LMS Certificate")
+def get_certified_participant_details(member):
+	count = frappe.db.count("LMS Certificate", {"member": member})
+	details = frappe.db.get_value(
+		"User",
+		member,
+		["full_name", "user_image", "username", "country", "headline", "open_to"],
+		as_dict=1,
+	)
+	details["certificate_count"] = count
+	return details
+
+
+def get_certification_query(filters):
+	Certificate = frappe.qb.DocType("LMS Certificate")
+	User = frappe.qb.DocType("User")
 
 	query = (
-		frappe.qb.from_(Certificate).select(Certificate.member).distinct().where(Certificate.published == 1)
+		frappe.qb.from_(Certificate)
+		.select(Certificate.member)
+		.distinct()
+		.join(User)
+		.on(Certificate.member == User.name)
+		.where(Certificate.published == 1)
+		.where(User.enabled == 1)
 	)
 
 	if filters:
@@ -332,9 +329,18 @@ def get_count_of_certified_members(filters=None):
 				query = query.where(
 					Certificate.course_title.like(f"%{value}%") | Certificate.batch_title.like(f"%{value}%")
 				)
-			elif field == "member_name":
+			if field == "member_name":
 				query = query.where(Certificate.member_name.like(value[1]))
+			if field == "open_to_work":
+				query = query.where(User.open_to == "Work")
+			if field == "hiring":
+				query = query.where(User.open_to == "Hiring")
+	return query
 
+
+@frappe.whitelist(allow_guest=True)
+def get_count_of_certified_members(filters=None):
+	query = get_certification_query(filters)
 	result = query.run(as_dict=True)
 	return len(result) or 0
 
@@ -1197,17 +1203,79 @@ def get_notifications(filters):
 	notifications = frappe.get_all(
 		"Notification Log",
 		filters,
-		["subject", "from_user", "link", "read", "name"],
+		[
+			"subject",
+			"from_user",
+			"link",
+			"read",
+			"name",
+			"creation",
+			"document_type",
+			"document_name",
+			"type",
+			"email_content",
+		],
 		order_by="creation desc",
 	)
 
 	for notification in notifications:
+		notification = update_document_details(notification)
+		notification = update_user_details(notification)
+
+	return notifications
+
+
+def update_user_details(notification):
+	if (
+		notification.document_details
+		and len(notification.document_details.get("instructors", []))
+		and not is_mention(notification)
+	):
+		from_user_details = notification.document_details["instructors"][0]
+	else:
 		from_user_details = frappe.db.get_value(
 			"User", notification.from_user, ["full_name", "user_image"], as_dict=1
 		)
-		notification.update(from_user_details)
+	notification["from_user_details"] = from_user_details
+	return notification
 
-	return notifications
+
+def is_mention(notification):
+	if notification.type == "Mention":
+		return True
+	if "mentioned you" in notification.subject.lower():
+		return True
+	return False
+
+
+def update_document_details(notification):
+	if notification.document_type == "LMS Course":
+		details = frappe.db.get_value(
+			"LMS Course", notification.document_name, ["title", "video_link", "short_introduction"], as_dict=1
+		)
+		instructors = get_instructors("LMS Course", notification.document_name)
+		details["instructors"] = instructors
+		notification["document_details"] = details
+
+	elif notification.document_type == "LMS Batch":
+		details = frappe.db.get_value(
+			"LMS Batch",
+			notification.document_name,
+			[
+				"title",
+				"description as short_introduction",
+				"video_link",
+				"start_date",
+				"end_date",
+				"start_time",
+				"timezone",
+			],
+			as_dict=1,
+		)
+		instructors = get_instructors("LMS Batch", notification.document_name)
+		details["instructors"] = instructors
+		notification["document_details"] = details
+	return notification
 
 
 @frappe.whitelist(allow_guest=True)
@@ -1635,7 +1703,7 @@ def get_profile_details(username):
 			"headline",
 			"language",
 			"cover_image",
-			"looking_for_job",
+			"open_to",
 			"linkedin",
 			"github",
 			"twitter",
@@ -1982,3 +2050,9 @@ def get_upcoming_batches():
 		limit=4,
 		pluck="name",
 	)
+
+
+@frappe.whitelist()
+def delete_programming_exercise(exercise):
+	frappe.db.delete("LMS Programming Exercise Submission", {"exercise": exercise})
+	frappe.db.delete("LMS Programming Exercise", exercise)
