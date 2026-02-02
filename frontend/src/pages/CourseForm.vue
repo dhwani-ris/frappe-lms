@@ -37,6 +37,19 @@
 								:onCreate="(value, close) => openSettings('Categories', close)"
 							/>
 						</div>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+								<FormControl
+									type="select"
+									v-model="course.custom_language"
+									:label="__('Language')"
+									:options="[
+									{ label: __('English'), value: 'English' },
+									{ label: __('Hindi'), value: 'Hindi' }
+									]"
+									:required="true"
+								/>
+							</div>
+
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 							<MultiSelect
 								v-model="instructors"
@@ -397,6 +410,7 @@ const course = reactive({
 	course_image: null,
 	card_gradient: '',
 	tags: '',
+	custom_language: '',
 	category: '',
 	published: false,
 	published_on: '',
