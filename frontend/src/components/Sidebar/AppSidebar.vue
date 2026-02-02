@@ -305,6 +305,7 @@ const unreadNotifications = createResource({
 })
 
 const addNotifications = () => {
+	return;
 	if (user) {
 		sidebarLinks.value.push({
 			label: 'Notifications',
@@ -333,6 +334,7 @@ const addQuizzes = () => {
 }
 
 const addAssignments = () => {
+	return;
 	if (!isInstructor.value && !isModerator.value) return
 
 	const assignmentsLinkExists = sidebarLinks.value.some(
@@ -374,6 +376,7 @@ const addProgrammingExercises = () => {
 }
 
 const addPrograms = async () => {
+	return;
 	const programsLinkExists = sidebarLinks.value.some(
 		(link) => link.label === 'Programs'
 	)
