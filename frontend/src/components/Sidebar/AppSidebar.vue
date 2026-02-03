@@ -238,6 +238,7 @@ const sidebarLinks = ref(getSidebarLinks())
 const showPageModal = ref(false)
 const isModerator = ref(false)
 const isInstructor = ref(false)
+const isSystemManager = ref(false)
 const pageToEdit = ref(null)
 const settingsStore = useSettings()
 const { sidebarSettings } = settingsStore
@@ -305,7 +306,7 @@ const unreadNotifications = createResource({
 })
 
 const addNotifications = () => {
-	return;
+	if (!isSystemManager.value) return
 	if (user) {
 		sidebarLinks.value.push({
 			label: 'Notifications',
@@ -334,8 +335,8 @@ const addQuizzes = () => {
 }
 
 const addAssignments = () => {
-	return;
-	if (!isInstructor.value && !isModerator.value) return
+	if (!isSystemManager.value) return
+	// if (!isInstructor.value && !isModerator.value) return
 
 	const assignmentsLinkExists = sidebarLinks.value.some(
 		(link) => link.label === 'Assignments'
@@ -376,7 +377,9 @@ const addProgrammingExercises = () => {
 }
 
 const addPrograms = async () => {
-	return;
+	// Admin only
+	if (!isSystemManager.value) return
+
 	const programsLinkExists = sidebarLinks.value.some(
 		(link) => link.label === 'Programs'
 	)
@@ -691,6 +694,7 @@ watch(userResource, () => {
 	if (userResource.data) {
 		isModerator.value = userResource.data.is_moderator
 		isInstructor.value = userResource.data.is_instructor
+		isSystemManager.value = userResource.data.is_system_manager
 		addHome()
 		addPrograms()
 		addProgrammingExercises()
