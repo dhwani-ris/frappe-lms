@@ -114,7 +114,7 @@
 			</Button>
 			<Button class="w-full mt-2" @click="copyBatchUrl">
 				<template #prefix>
-					<Link class="h-4 w-4 stroke-1.5" />
+					<LinkIcon class="h-4 w-4 stroke-1.5" />
 				</template>
 				<span>
 					{{ __('Copy Link') }}
@@ -162,7 +162,7 @@ import {
 	Link,
 	Pencil,
 	Settings,
-	Link,
+	Link as LinkIcon,
 } from 'lucide-vue-next'
 import { formatNumberIntoCurrency, formatTime } from '@/utils'
 import DateRange from '@/components/Common/DateRange.vue'
