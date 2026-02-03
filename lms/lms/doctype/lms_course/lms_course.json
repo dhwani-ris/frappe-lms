@@ -284,23 +284,10 @@
    "options": "Red\nBlue\nGreen\nAmber\nCyan\nOrange\nPink\nPurple\nTeal\nViolet\nYellow\nGray"
   },
   {
-   "fieldname": "course_duration",
-   "fieldtype": "Float",
-   "label": "Course Duration"
-  },{
-   "fieldname": "section_break_vqbh",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_sflq",
-   "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "paid_certificate",
-   "fieldname": "timezone",
-   "fieldtype": "Data",
-   "label": "Timezone"
-  }
+    "fieldname": "course_duration",
+    "fieldtype": "Float",
+    "label": "Course Duration"
+   }
  ],
  "is_published_field": "published",
  "links": [

@@ -201,7 +201,7 @@
 							:label="__('Short Introduction')"
 							:placeholder="
 								__(
-									'A one line introduction to the course that appears on the course card'
+									'FFintroduction to the course that appears on the course card'
 								)
 							"
 							:required="true"
@@ -228,6 +228,14 @@
 									'Paste the youtube link of a short video introducing the course'
 								)
 							"
+						/>
+						<FormControl
+							v-model="course.course_duration"
+							:label="__('Course Duration (Hrs)')"
+							type="number"
+							:placeholder="__('Enter course duration in hours (e.g., 2.5 for 2 hours 30 minutes)')"
+							step="0.5"
+							min="0"
 						/>
 
 						<FormControl
@@ -423,8 +431,7 @@ const course = reactive({
 	course_price: '',
 	currency: '',
 	evaluator: '',
-	course_duration: 0,
-	timezone: '',
+	course_duration: '',
 })
 
 const meta = reactive({
