@@ -201,7 +201,7 @@
 							:label="__('Short Introduction')"
 							:placeholder="
 								__(
-									'FFintroduction to the course that appears on the course card'
+									'Introduction to the course that appears on the course card'
 								)
 							"
 							:required="true"
@@ -237,16 +237,6 @@
 							step="0.5"
 							min="0"
 						/>
-
-						<FormControl
-							v-model="course.course_duration"
-							:label="__('Course Duration (Hrs)')"
-							type="number"
-							:placeholder="__('Enter course duration in hours (e.g., 2.5 for 2 hours 30 minutes)')"
-							step="0.1"
-							min="0"
-						/>
-
 						<MultiSelect
 							v-model="related_courses"
 							doctype="LMS Course"
