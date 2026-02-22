@@ -43,8 +43,17 @@ class LMSCourse(Document):
 			).save(ignore_permissions=True)
 
 	def validate_video_link(self):
-		if self.video_link and "/" in self.video_link:
-			self.video_link = self.video_link.split("/")[-1]
+		import re
+		if not self.video_link:
+			return
+		match = re.search(
+			r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|embed/|v/|shorts/))([a-zA-Z0-9_-]{11})",
+			self.video_link,
+		)
+		if match:
+			self.video_link = match.group(1)
+		elif re.match(r"^[a-zA-Z0-9_-]{11}$", self.video_link.strip()):
+			self.video_link = self.video_link.strip()
 
 	def validate_status(self):
 		if self.published:

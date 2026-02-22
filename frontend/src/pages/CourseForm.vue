@@ -140,13 +140,6 @@
 									</div>
 								</div>
 							</div>
-
-							<ColorSwatches
-								v-model="course.card_gradient"
-								:label="__('Color')"
-								:description="__('Choose a color for the course card')"
-								class="w-full"
-							/>
 						</div>
 					</div>
 
@@ -170,17 +163,7 @@
 									type="date"
 								/>
 							</div>
-							<div class="flex flex-col space-y-5">
-								<FormControl
-									type="checkbox"
-									v-model="course.upcoming"
-									:label="__('Upcoming')"
-								/>
-								<FormControl
-									type="checkbox"
-									v-model="course.featured"
-									:label="__('Featured')"
-								/>
+							<div class="flex flex-col space-y-5">	
 								<FormControl
 									type="checkbox"
 									v-model="course.disable_self_learning"
@@ -237,41 +220,17 @@
 							step="0.5"
 							min="0"
 						/>
-						<MultiSelect
-							v-model="related_courses"
-							doctype="LMS Course"
-							:label="__('Related Courses')"
-							:filters="{ name: ['!=', courseResource.data?.name] }"
-							:onCreate="
-								(close) => {
-									router.push({
-										name: 'CourseForm',
-										params: { courseName: 'new' },
-									})
-								}
-							"
-						/>
 					</div>
 
 					<div class="px-5 md:px-10 pb-5 space-y-5 border-b">
 						<div class="text-lg font-semibold mt-5 text-ink-gray-9">
-							{{ __('Pricing and Certification') }}
+							{{ __('Certification Settings') }}
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
 							<FormControl
 								type="checkbox"
-								v-model="course.paid_course"
-								:label="__('Paid Course')"
-							/>
-							<FormControl
-								type="checkbox"
 								v-model="course.enable_certification"
 								:label="__('Completion Certificate')"
-							/>
-							<FormControl
-								type="checkbox"
-								v-model="course.paid_certificate"
-								:label="__('Paid Certificate')"
 							/>
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -310,27 +269,6 @@
 									:placeholder="__('e.g. IST, UTC, GMT...')"
 								/>
 							</div>
-						</div>
-					</div>
-
-					<div class="px-5 md:px-10 pb-5 space-y-5">
-						<div class="text-lg font-semibold mt-5 text-ink-gray-9">
-							{{ __('Meta Tags') }}
-						</div>
-						<div class="space-y-5">
-							<FormControl
-								v-model="meta.description"
-								:label="__('Meta Description')"
-								type="textarea"
-								:rows="7"
-							/>
-							<FormControl
-								v-model="meta.keywords"
-								:label="__('Meta Keywords')"
-								type="textarea"
-								:rows="7"
-								:placeholder="__('Comma separated keywords for SEO')"
-							/>
 						</div>
 					</div>
 				</div>
@@ -477,7 +415,7 @@ const courseCreationResource = createResource({
 				related_courses: related_courses.value.map((course) => ({
 					course: course,
 				})),
-				...values,
+				...escapedCourse(),
 			},
 		}
 	},
@@ -498,7 +436,7 @@ const courseEditResource = createResource({
 				related_courses: related_courses.value.map((course) => ({
 					course: course,
 				})),
-				...course,
+				...escapedCourse(),
 			},
 		}
 	},
@@ -559,16 +497,20 @@ const imageResource = createResource({
 	},
 })
 
-const validateFields = () => {
+const escapedCourse = () => {
+	const result = {}
+	const skipEscape = ['description', 'video_link']
 	Object.keys(course).forEach((key) => {
-		if (key != 'description' && typeof course[key] === 'string') {
-			course[key] = escapeHTML(course[key])
+		if (!skipEscape.includes(key) && typeof course[key] === 'string') {
+			result[key] = escapeHTML(course[key])
+		} else {
+			result[key] = course[key]
 		}
 	})
+	return result
 }
 
 const submitCourse = () => {
-	validateFields()
 	if (courseResource.data) {
 		editCourse()
 	} else {

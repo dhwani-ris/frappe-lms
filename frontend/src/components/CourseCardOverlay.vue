@@ -4,7 +4,7 @@
 			v-if="course.data.video_link"
 			:src="video_link"
 			class="rounded-t-md min-h-56 w-full"
-		/>
+		></iframe>
 		<div class="p-5">
 			<div v-if="course.data.paid_course" class="text-2xl font-semibold mb-3">
 				{{ course.data.price }}
@@ -214,10 +214,15 @@ const props = defineProps({
 })
 
 const video_link = computed(() => {
-	if (props.course.data.video_link) {
-		return 'https://www.youtube.com/embed/' + props.course.data.video_link
-	}
-	return null
+	const raw = props.course.data.video_link
+	if (!raw) return null
+	// Backend normalizes to bare 11-char ID on save.
+	// As fallback, extract from full URLs (handles legacy or unsaved data).
+	const match = raw.match(
+		/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))([a-zA-Z0-9_-]{11})/
+	)
+	const id = match ? match[1] : raw.trim()
+	return `https://www.youtube.com/embed/${id}`
 })
 
 function enrollStudent() {
