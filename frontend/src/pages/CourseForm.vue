@@ -316,6 +316,7 @@ import {
 	updateMetaInfo,
 	validateFile,
 	escapeHTML,
+	undoEscapeHTML,
 } from '@/utils'
 import Link from '@/components/Controls/Link.vue'
 import CourseOutline from '@/components/CourseOutline.vue'
@@ -463,7 +464,12 @@ const courseResource = createResource({
 				data.related_courses.forEach((course) => {
 					related_courses.value.push(course.course)
 				})
-			} else if (Object.hasOwn(course, key)) course[key] = data[key]
+			} else if (Object.hasOwn(course, key)) {
+				course[key] =
+					key === 'short_introduction'
+						? undoEscapeHTML(data[key] || '')
+						: data[key]
+			}
 		})
 		let checkboxes = [
 			'published',
@@ -499,7 +505,9 @@ const imageResource = createResource({
 
 const escapedCourse = () => {
 	const result = {}
-	const skipEscape = ['description', 'video_link']
+	// Plain text / rich fields: do not HTML-escape on save — Vue {{ }} escapes on render;
+	// escaping here stored entities in DB and re-save double-encoded (e.g. &amp;#39;).
+	const skipEscape = ['description', 'video_link', 'short_introduction']
 	Object.keys(course).forEach((key) => {
 		if (!skipEscape.includes(key) && typeof course[key] === 'string') {
 			result[key] = escapeHTML(course[key])

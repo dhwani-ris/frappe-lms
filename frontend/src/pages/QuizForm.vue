@@ -231,7 +231,7 @@ import {
 import { sessionStore } from '../stores/session'
 import { ClipboardList, ListChecks, Plus, Trash2 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
-import { escapeHTML } from '@/utils'
+import { undoEscapeHTML } from '@/utils'
 import Question from '@/components/Modals/Question.vue'
 
 const { brand } = sessionStore()
@@ -289,6 +289,9 @@ const quizDetails = createDocumentResource({
 	name: props.quizID,
 	auto: false,
 	onSuccess(doc) {
+		if (doc.title) {
+			quizDetails.doc.title = undoEscapeHTML(doc.title)
+		}
 		if (doc.questions && doc.questions.length > 0) {
 			questions.value = doc.questions.map((question) => question)
 		}
@@ -296,7 +299,7 @@ const quizDetails = createDocumentResource({
 })
 
 const validateTitle = () => {
-	quizDetails.doc.title = escapeHTML(quizDetails.doc.title.trim())
+	quizDetails.doc.title = quizDetails.doc.title.trim()
 }
 
 const submitQuiz = () => {

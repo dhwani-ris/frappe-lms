@@ -540,6 +540,22 @@ export const escapeHTML = (text) => {
 	)
 }
 
+/** Reverses escapeHTML() so legacy / double-encoded plain text fields load correctly. */
+export const undoEscapeHTML = (text) => {
+	if (!text || typeof text !== 'string') return text
+	let out = text
+	while (out.includes('&amp;')) {
+		out = out.replace(/&amp;/g, '&')
+	}
+	return out
+		.replace(/&lt;/g, '<')
+		.replace(/&gt;/g, '>')
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&#x60;/gi, '`')
+		.replace(/&#x3D;/gi, '=')
+}
+
 export const canCreateCourse = () => {
 	const { userResource } = usersStore()
 	return (
