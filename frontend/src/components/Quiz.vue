@@ -237,7 +237,12 @@
 								{{ __('Next') }}
 							</span>
 						</Button>
-						<Button v-else @click="submitQuiz()">
+						<Button
+							v-else
+							@click="submitQuiz()"
+							:loading="isSubmitting"
+							:disabled="isSubmitting"
+						>
 							<span>
 								{{ __('Submit') }}
 							</span>
@@ -345,6 +350,7 @@ const showAnswers = reactive([])
 let questions = reactive([])
 const possibleAnswer = ref(null)
 const timer = ref(0)
+const isSubmitting = ref(false)
 let timerInterval = null
 
 const props = defineProps({
@@ -615,6 +621,9 @@ const resetQuestion = () => {
 }
 
 const submitQuiz = () => {
+	if (isSubmitting.value) return
+	isSubmitting.value = true
+
 	if (!quiz.data.show_answers) {
 		if (questionDetails.data.type == 'Open Ended') addToLocalStorage()
 		else checkAnswer()
@@ -636,6 +645,7 @@ const createSubmission = () => {
 				if (quiz.data.duration) clearInterval(timerInterval)
 			},
 			onError(err) {
+				isSubmitting.value = false
 				const errorTitle = err?.message || ''
 				if (errorTitle.includes('MaximumAttemptsExceededError')) {
 					const errorMessage = err.messages?.[0] || err
@@ -651,6 +661,7 @@ const createSubmission = () => {
 
 const resetQuiz = () => {
 	activeQuestion.value = 0
+	isSubmitting.value = false
 	selectedOptions.splice(0, selectedOptions.length, ...[0, 0, 0, 0])
 	showAnswers.length = 0
 	quizSubmission.reset()
