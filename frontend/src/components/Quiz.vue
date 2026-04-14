@@ -410,7 +410,7 @@ const startTimer = () => {
 		timer.value--
 		if (timer.value == 0) {
 			clearInterval(timerInterval)
-			submitQuiz()
+			submitQuiz(true)
 		}
 	}, 1000)
 }
@@ -542,7 +542,7 @@ const getAnswers = () => {
 	return answers
 }
 
-const checkAnswer = () => {
+const checkAnswer = (afterSave) => {
 	let answers = getAnswers()
 	if (!answers.length) {
 		toast.warning(__('Please select an option'))
@@ -576,6 +576,10 @@ const checkAnswer = () => {
 			if (!quiz.data.show_answers) {
 				resetQuestion()
 			}
+			afterSave?.()
+		},
+		onError() {
+			if (afterSave) isSubmitting.value = false
 		},
 	})
 }
@@ -620,16 +624,27 @@ const resetQuestion = () => {
 	possibleAnswer.value = null
 }
 
-const submitQuiz = () => {
+const submitQuiz = (forceSubmit = false) => {
 	if (isSubmitting.value) return
 	isSubmitting.value = true
 
 	if (!quiz.data.show_answers) {
-		if (questionDetails.data.type == 'Open Ended') addToLocalStorage()
-		else checkAnswer()
-		setTimeout(() => {
+		if (questionDetails.data.type == 'Open Ended') {
+			addToLocalStorage()
 			createSubmission()
-		}, 500)
+			return
+		}
+		if (forceSubmit) {
+			createSubmission()
+			return
+		}
+		const answers = getAnswers()
+		if (!answers.length) {
+			toast.warning(__('Please select an option'))
+			isSubmitting.value = false
+			return
+		}
+		checkAnswer(() => createSubmission())
 		return
 	}
 	createSubmission()
