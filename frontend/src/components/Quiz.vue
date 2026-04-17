@@ -115,7 +115,10 @@
 								{{ getInstructions(questionDetails.data) }}
 							</span>
 						</div>
-						<div class="text-ink-gray-9 text-sm font-semibold item-left">
+						<div
+							v-if="showPerQuestionMarks"
+							class="text-ink-gray-9 text-sm font-semibold item-left"
+						>
 							{{ question.marks }}
 							{{ question.marks == 1 ? __('Mark') : __('Marks') }}
 						</div>
@@ -428,6 +431,10 @@ const formatTimer = (seconds) => {
 
 const timerProgress = computed(() => {
 	return (timer.value / (quiz.data.duration * 60)) * 100
+})
+
+const showPerQuestionMarks = computed(() => {
+	return !quiz.data?.custom_pcat_quiz
 })
 
 const shuffleArray = (array) => {
