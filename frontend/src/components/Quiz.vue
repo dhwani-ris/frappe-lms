@@ -1,14 +1,24 @@
 <template>
-	<div v-if="quiz.data">
+	<div class="quiz-component">
+		<div
+			v-if="showFullPageQuizLoader"
+			class="flex min-h-[80px] flex-col items-center justify-center gap-1.5 rounded-lg border border-outline-gray-1 bg-surface-gray-2 py-4 px-5 shadow-sm"
+		>
+			<LoadingIndicator class="shrink-0 text-ink-gray-5" :scale="64" />
+			<p class="max-w-[13rem] text-center text-[11px] font-normal leading-snug text-ink-gray-6">
+				{{ fullPageQuizLoaderText }}
+			</p>
+		</div>
+		<div v-else-if="quiz.data">
 		<div
 			class="bg-surface-blue-2 space-y-2 py-2 px-3 mb-4 rounded-md text-sm text-ink-blue-2 leading-5"
 		>
 			<div v-if="inVideo">
-				{{ __('You will have to complete the quiz to continue the video') }}
+				{{ __('You will have to complete the assessment to continue the video') }}
 			</div>
 			<div class="leading-5">
 				{{
-					__('This quiz consists of {0} questions.').format(questions.length)
+					__('This assessment consists of {0} questions.').format(questions.length)
 				}}
 			</div>
 			<div v-if="quiz.data?.duration" class="leading-5">
@@ -21,20 +31,20 @@
 			<div v-if="quiz.data?.duration" class="leading-5">
 				{{
 					__(
-						'If you fail to do so, the quiz will be automatically submitted when the timer ends.'
+						'If you fail to do so, the assessment will be automatically submitted when the timer ends.'
 					)
 				}}
 			</div>
 			<div v-if="quiz.data.passing_percentage" class="leading-relaxed">
 				{{
 					__(
-						'You will have to get {0}% correct answers in order to pass the quiz.'
+						'You will have to get {0}% correct answers in order to pass the assessment.'
 					).format(quiz.data.passing_percentage)
 				}}
 			</div>
 			<div v-if="quiz.data.max_attempts" class="leading-5">
 				{{
-					__('You can attempt this quiz {0}.').format(
+					__('You can attempt this assessment {0}.').format(
 						quiz.data.max_attempts == 1
 							? '1 time'
 							: `${quiz.data.max_attempts} times`
@@ -70,15 +80,12 @@
 				</div>
 				<div class="flex items-center justify-center space-x-2 mt-4">
 					<Button
-						v-if="
-							!quiz.data.max_attempts ||
-							attempts.data?.length < quiz.data.max_attempts
-						"
+						v-if="canStartMoreAttempts"
 						variant="solid"
 						@click="startQuiz"
 					>
 						<span>
-							{{ inVideo ? __('Start the Quiz') : __('Start') }}
+							{{ inVideo ? __('Start the Assessment') : __('Start') }}
 						</span>
 					</Button>
 					<Button v-if="inVideo" @click="props.backToVideo()">
@@ -86,15 +93,36 @@
 					</Button>
 				</div>
 				<div
-					v-if="
+					v-if="blockedBecausePassed"
+					class="leading-5 text-ink-gray-7"
+				>
+					{{
+						__(
+							'You have already Attempted this Assessment. You cannot attempt it again.'
+						)
+					}}
+				</div>
+				<div
+					v-else-if="
+						tmfAttemptCheckDone &&
+						!tmfAttemptAllowed &&
+						tmfAttemptBlockMessage
+					"
+					class="leading-5 text-ink-gray-7"
+				>
+					{{ tmfAttemptBlockMessage }}
+				</div>
+				<div
+					v-else-if="
 						quiz.data.max_attempts &&
-						attempts.data?.length >= quiz.data.max_attempts
+						attempts.data?.length >= quiz.data.max_attempts &&
+						!canStartMoreAttempts
 					"
 					class="leading-5 text-ink-gray-7"
 				>
 					{{
 						__(
-							'You have already exceeded the maximum number of attempts allowed for this quiz.'
+							'You have already exceeded the maximum number of attempts allowed for this assessment.'
 						)
 					}}
 				</div>
@@ -115,7 +143,10 @@
 								{{ getInstructions(questionDetails.data) }}
 							</span>
 						</div>
-						<div class="text-ink-gray-9 text-sm font-semibold item-left">
+						<div
+							v-if="showPerQuestionMarks"
+							class="text-ink-gray-9 text-sm font-semibold item-left"
+						>
 							{{ question.marks }}
 							{{ question.marks == 1 ? __('Mark') : __('Marks') }}
 						</div>
@@ -253,7 +284,7 @@
 		</div>
 		<div v-else class="border rounded-md p-20 text-center space-y-2">
 			<div class="text-lg font-semibold text-ink-gray-9">
-				{{ __('Quiz Summary') }}
+				{{ __('Assessment Summary') }}
 			</div>
 			<div
 				v-if="quizSubmission.data.is_open_ended"
@@ -289,10 +320,7 @@
 				<Button
 					@click="resetQuiz()"
 					class="mt-2"
-					v-if="
-						!quiz.data.max_attempts ||
-						attempts?.data.length < quiz.data.max_attempts
-					"
+					v-if="canStartMoreAttempts"
 				>
 					<span>
 						{{ __('Try Again') }}
@@ -318,10 +346,17 @@
 				:options="{
 					selectable: false,
 					showTooltip: false,
-					emptyState: { title: __('No Quiz submissions found') },
+					emptyState: { title: __('No assessment submissions found') },
 				}"
 			>
 			</ListView>
+		</div>
+		</div>
+		<div
+			v-else-if="quiz.fetched && (quiz.error || !quiz.data)"
+			class="rounded-md border border-outline-gray-2 p-12 text-center text-sm text-ink-gray-7"
+		>
+			{{ __('This assessment could not be loaded.') }}
 		</div>
 	</div>
 </template>
@@ -331,9 +366,10 @@ import {
 	Button,
 	call,
 	createResource,
-	ListView,
-	TextEditor,
 	FormControl,
+	ListView,
+	LoadingIndicator,
+	TextEditor,
 	toast,
 } from 'frappe-ui'
 import { ref, watch, reactive, inject, computed } from 'vue'
@@ -351,6 +387,10 @@ let questions = reactive([])
 const possibleAnswer = ref(null)
 const timer = ref(0)
 const isSubmitting = ref(false)
+/** TMF: server gate — pending row + course, max attempts, not already passed */
+const tmfAttemptAllowed = ref(false)
+const tmfAttemptCheckDone = ref(false)
+const tmfAttemptBlockMessage = ref('')
 let timerInterval = null
 
 const props = defineProps({
@@ -430,6 +470,10 @@ const timerProgress = computed(() => {
 	return (timer.value / (quiz.data.duration * 60)) * 100
 })
 
+const showPerQuestionMarks = computed(() => {
+	return !quiz.data?.custom_pcat_quiz
+})
+
 const shuffleArray = (array) => {
 	for (let i = array.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1))
@@ -471,13 +515,83 @@ watch(
 	() => {
 		if (quiz.data) {
 			populateQuestions()
-		}
-		if (quiz.data && quiz.data.max_attempts) {
 			attempts.reload()
 			resetQuiz()
 		}
 	}
 )
+
+function submissionRowIsPass(row) {
+	const pct = Number(row?.percentage || 0)
+	const need = Number(row?.passing_percentage ?? 0)
+	return pct >= need
+}
+
+const blockedBecausePassed = computed(() => {
+	if (!attempts.data?.length) return false
+	return attempts.data.some(submissionRowIsPass)
+})
+
+/** Covers: quiz doc fetch, user session, TMF access API — avoids blank screen (root was v-if quiz.data only). */
+const showFullPageQuizLoader = computed(() => {
+	if (quiz.error) return false
+	if (quiz.loading || !quiz.fetched || !quiz.data) return true
+	if (activeQuestion.value !== 0) return false
+	if (user.loading) return true
+	if (!user.fetched) return true
+	if (!user.data?.name) return false
+	return !tmfAttemptCheckDone.value
+})
+
+const fullPageQuizLoaderText = computed(() => {
+	if (!quiz.data || !quiz.fetched || quiz.loading) {
+		return __('Loading assessment…')
+	}
+	return __('Checking assessment access…')
+})
+
+watch(
+	() => [
+		quiz.data?.name,
+		quiz.data?.max_attempts,
+		attempts.data,
+		user.data?.name,
+		blockedBecausePassed.value,
+	],
+	async () => {
+		tmfAttemptCheckDone.value = false
+		tmfAttemptBlockMessage.value = ''
+		tmfAttemptAllowed.value = false
+		if (!quiz.data?.name || !user.data?.name) {
+			tmfAttemptCheckDone.value = true
+			return
+		}
+		if (blockedBecausePassed.value) {
+			tmfAttemptCheckDone.value = true
+			return
+		}
+		try {
+			const r = await call(
+				'tmf.tmf_lms.api.quiz_retry.tmf_lms_quiz_retry_allowed',
+				{ quiz: quiz.data.name },
+			)
+			tmfAttemptAllowed.value = !!r?.allowed
+			tmfAttemptBlockMessage.value = r?.message || ''
+		} catch (e) {
+			tmfAttemptAllowed.value = false
+		} finally {
+			tmfAttemptCheckDone.value = true
+		}
+	},
+	{ deep: true, immediate: true },
+)
+
+const canStartMoreAttempts = computed(() => {
+	if (blockedBecausePassed.value) return false
+	if (!quiz.data?.name || !user.data?.name) return false
+	if (!tmfAttemptCheckDone.value) return false
+	return tmfAttemptAllowed.value
+})
 
 const quizSubmission = createResource({
 	url: 'lms.lms.doctype.lms_quiz.lms_quiz.quiz_summary',
