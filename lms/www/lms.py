@@ -18,6 +18,15 @@ def get_context():
 		)
 		raise frappe.Redirect
 
+	locked_path = frappe.cache.get_value(f"locked_lms_path:{frappe.session.sid}")
+	if (
+		locked_path
+		and frappe.request.path != locked_path
+		and "LMS Student" in frappe.get_roles()
+	):
+		frappe.local.flags.redirect_location = locked_path
+		raise frappe.Redirect
+
 	context = frappe._dict()
 	context.boot = get_boot()
 	frappe.db.commit()
