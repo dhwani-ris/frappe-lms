@@ -9,6 +9,15 @@ no_cache = 1
 
 
 def get_context():
+	if frappe.session.user == "Guest":
+		frappe.redirect_to_message(
+			_("Not Permitted"),
+			_("The link you trying to login is invalid or expired. Please contact support to login again."),
+			http_status_code=403,
+			indicator_color="red",
+		)
+		raise frappe.Redirect
+
 	context = frappe._dict()
 	context.boot = get_boot()
 	frappe.db.commit()
